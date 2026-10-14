@@ -7,6 +7,10 @@
   <meta name="theme-color" content="#c6a6ee">
   <title>ChatVibe 💜</title>
   <link rel="stylesheet" href="style.css">
+  
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#ff8fbd">
+
 </head>
 
 <body>
@@ -172,4 +176,14 @@
 
   <script type="module" src="script.js"></script>
 </body>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js")
+        .catch(error => console.error("Service worker error:", error));
+    });
+  }
+</script>
+
 </html>
