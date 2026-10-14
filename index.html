@@ -1,0 +1,175 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#c6a6ee">
+  <title>ChatVibe 💜</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <main class="shell">
+
+    <!-- LOGIN / SIGNUP -->
+    <section id="authView" class="panel auth">
+      <h1>💜 ChatVibe 🌸</h1>
+      <p>Connect with friends ✨</p>
+
+      <input id="username" type="text"
+        placeholder="Username 💗"
+        autocomplete="username" maxlength="20">
+
+      <input id="password" type="password"
+        placeholder="Password (6+ characters)"
+        autocomplete="current-password">
+
+      <input id="confirmPassword" type="password"
+        placeholder="Confirm password 💕"
+        autocomplete="new-password" class="hidden">
+
+      <button id="loginBtn">Login 💌</button>
+      <button id="signupBtn" class="secondary">
+        Create account 🌷
+      </button>
+    </section>
+
+    <!-- CHAT APPLICATION -->
+    <section id="chatView" class="chat hidden">
+
+      <header>
+        <div class="my-profile">
+          <img id="myPhoto"
+            src="https://placehold.co/100x100?text=Me"
+            alt="My profile photo">
+
+          <div>
+            <strong>💜 ChatVibe</strong>
+            <span id="myUsername"></span>
+            <span id="myPresence">🟢 Online</span>
+          </div>
+
+          <label class="photo-upload" for="photoInput">
+            📷 Change photo
+          </label>
+
+          <input id="photoInput" type="file"
+            accept="image/*" hidden>
+
+          <button id="logoutBtn" class="small">
+            Log out
+          </button>
+        </div>
+      </header>
+
+      <!-- THEME SETTINGS -->
+      <section class="theme-toolbar">
+        <div class="theme-heading">🎀 Choose your vibe</div>
+
+        <div class="theme-options">
+          <button type="button" class="theme-btn selected"
+            data-theme="theme-lavender">💜 Lavender</button>
+
+          <button type="button" class="theme-btn"
+            data-theme="theme-pink">🌸 Pink</button>
+
+          <button type="button" class="theme-btn"
+            data-theme="theme-peach">🍑 Peach</button>
+
+          <button type="button" class="theme-btn"
+            data-theme="theme-mint">🌿 Mint</button>
+        </div>
+      </section>
+
+      <div class="layout">
+
+        <!-- SIDEBAR -->
+        <aside>
+          <label for="friendUsername">💌 Start a chat</label>
+
+          <div class="find">
+            <input id="friendUsername" type="text"
+              placeholder="Friend's username 🦋"
+              maxlength="20">
+
+            <button id="startBtn">Start 💗</button>
+          </div>
+
+          <h3>💕 Conversations</h3>
+          <div id="conversationList"></div>
+        </aside>
+
+        <!-- CHAT THREAD -->
+        <section class="thread">
+
+          <h2 id="threadTitle">Choose a conversation 🌸</h2>
+          <p id="friendPresence" class="presence-label">
+            💌 Select a friend to start chatting
+          </p>
+
+          <div id="messages" class="messages"
+            aria-live="polite"></div>
+
+          <!-- PHOTO PREVIEW -->
+          <div id="imagePreview" class="image-preview hidden">
+            <img id="previewImage" alt="Selected image preview">
+            <button id="cancelImageBtn" type="button">
+              ✖ Remove photo
+            </button>
+          </div>
+
+          <!-- MESSAGE FORM -->
+          <form id="messageForm" class="compose">
+
+            <button type="button" id="emojiBtn"
+              class="emoji-btn" aria-label="Open emoji picker"
+              title="Choose an emoji" disabled>😊</button>
+
+            <label for="chatPhotoInput" class="chat-photo-btn"
+              title="Choose a photo">📸</label>
+
+            <input id="chatPhotoInput" type="file"
+              accept="image/*" hidden disabled>
+
+            <input id="messageInput" type="text"
+              maxlength="2000"
+              placeholder="Write a message... 💌"
+              autocomplete="off" disabled>
+
+            <button id="sendBtn" type="submit" disabled>
+              Send 💗
+            </button>
+          </form>
+
+          <!-- EMOJI PICKER -->
+          <div id="emojiPicker" class="emoji-picker" hidden>
+            <button type="button" class="emoji-option">🥰</button>
+            <button type="button" class="emoji-option">😍</button>
+            <button type="button" class="emoji-option">😘</button>
+            <button type="button" class="emoji-option">💕</button>
+            <button type="button" class="emoji-option">💗</button>
+            <button type="button" class="emoji-option">🦋</button>
+            <button type="button" class="emoji-option">🌸</button>
+            <button type="button" class="emoji-option">✨</button>
+            <button type="button" class="emoji-option">🥹</button>
+            <button type="button" class="emoji-option">🧸</button>
+            <button type="button" class="emoji-option">💌</button>
+            <button type="button" class="emoji-option">🎀</button>
+            <button type="button" class="emoji-option">😊</button>
+            <button type="button" class="emoji-option">😂</button>
+            <button type="button" class="emoji-option">❤️</button>
+            <button type="button" class="emoji-option">🤗</button>
+            <button type="button" class="emoji-option">😂</button>
+        </div>
+
+        </section>
+      </div>
+    </section>
+
+    <p id="status" role="status"></p>
+  </main>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
