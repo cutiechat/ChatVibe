@@ -597,3 +597,55 @@ body::before {
   position: relative;
   z-index: 1;
 }
+/* Conversation row */
+.conversation-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.conversation-row .conversation {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Delete chat button */
+.delete-chat-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 12px;
+  padding: 9px 12px;
+  cursor: pointer;
+  background: rgba(255, 150, 180, 0.18);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.delete-chat-btn:hover {
+  background: rgba(255, 100, 140, 0.3);
+  transform: scale(1.05);
+}
+
+/* Delete message button */
+.delete-message-btn {
+  display: block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 12px;
+  cursor: pointer;
+  background: rgba(255, 150, 180, 0.2);
+  color: inherit;
+}
+
+.delete-message-btn:hover {
+  background: rgba(255, 100, 140, 0.35);
+}
+
+.delete-chat-btn:disabled,
+.delete-message-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

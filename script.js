@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
 
 import {
@@ -14,6 +13,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   collection,
   query,
   where,
@@ -72,9 +72,13 @@ let activeFriendId = null;
 let unsubscribeChats = null;
 let unsubscribeMessages = null;
 let unsubscribePresence = null;
+let unsubscribeHiddenChats = null;
 
 let presenceTimer = null;
 let selectedImageData = null;
+
+let cachedChats = [];
+let hiddenChatIds = new Set();
 
 // ===== Cute Themes 🎀 =====
 
@@ -176,7 +180,9 @@ $("signupBtn").onclick = async () => {
   }
 
   if (!validUsername(username)) {
-    status("Username must be 3-20 characters: letters, numbers, dots or underscores.");
+    status(
+      "Username must be 3-20 characters: letters, numbers, dots or underscores."
+    );
     return;
   }
 
@@ -252,8 +258,6 @@ $("loginBtn").onclick = async () => {
 
 // ===== Online / Offline Presence 🟢 =====
 
-// IMPORTANT: Keep only this one updatePresence function.
-
 async function updatePresence(isOnline) {
   if (!currentUser) return;
 
@@ -269,7 +273,6 @@ async function updatePresence(isOnline) {
   }
 
   try {
-    // Merge preserves existing email and username profile fields.
     await setDoc(userRef, fields, { merge: true });
   } catch (error) {
     console.error("Presence update failed:", error);
@@ -282,9 +285,7 @@ function startPresence() {
   updatePresence(true);
 
   presenceTimer = setInterval(() => {
-    if (currentUser) {
-      updatePresence(true);
-    }
+    if (currentUser) updatePresence(true);
   }, 45000);
 }
 
@@ -292,9 +293,7 @@ function stopPresence() {
   clearInterval(presenceTimer);
   presenceTimer = null;
 
-  if (currentUser) {
-    updatePresence(false);
-  }
+  if (currentUser) updatePresence(false);
 }
 
 window.addEventListener("pagehide", () => {
@@ -311,16 +310,125 @@ window.addEventListener("pagehide", () => {
   });
 });
 
+// ===== Conversation List + Delete Chat for Me 🗑️ =====
+
+function renderConversationList() {
+  const list = $("conversationList");
+  if (!list) return;
+
+  list.replaceChildren();
+
+  cachedChats.forEach((chat) => {
+    // Hide only this user's selected conversations.
+    if (hiddenChatIds.has(chat.id)) return;
+
+    const data = chat.data();
+    const members = data.members || [];
+    const friendId = members.find((id) => id !== currentUser?.uid);
+
+    if (!friendId) return;
+
+    const names = data.memberUsernames || [];
+    const friendUsername =
+      names.find(
+        (name) => usernameKey(name) !== currentUsername
+      ) || "Friend";
+
+    const row = document.createElement("div");
+    row.className = "conversation-row";
+
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className =
+      "conversation" +
+      (activeChat === chat.id ? " active" : "");
+    openButton.textContent = "💌 @" + friendUsername;
+
+    openButton.onclick = () => {
+      openChat(chat.id, friendUsername, friendId);
+    };
+
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "delete-chat-btn";
+    deleteButton.textContent = "🗑️";
+    deleteButton.title = "Delete chat for me";
+    deleteButton.setAttribute("aria-label", "Delete chat for me");
+
+    deleteButton.onclick = async () => {
+      if (!currentUser) return;
+
+      const confirmed = confirm(
+        `Hide your chat with @${friendUsername} from your list?\n\n` +
+        "This will not delete your friend's messages."
+      );
+
+      if (!confirmed) return;
+
+      deleteButton.disabled = true;
+
+      try {
+        const hiddenRef = doc(
+          db,
+          "users",
+          currentUser.uid,
+          "hiddenChats",
+          chat.id
+        );
+
+        await setDoc(hiddenRef, {
+          createdAt: serverTimestamp()
+        });
+
+        if (activeChat === chat.id) {
+          if (unsubscribeMessages) unsubscribeMessages();
+          if (unsubscribePresence) unsubscribePresence();
+
+          unsubscribeMessages = null;
+          unsubscribePresence = null;
+
+          activeChat = null;
+          activeFriendId = null;
+
+          $("messages").replaceChildren();
+          $("threadTitle").textContent = "Choose a conversation 🌸";
+          $("friendPresence").textContent = "💌 Select a friend to chat";
+
+          $("messageInput").disabled = true;
+          $("sendBtn").disabled = true;
+          $("emojiBtn").disabled = true;
+          $("chatPhotoInput").disabled = true;
+          $("emojiPicker").hidden = true;
+
+          clearSelectedImage();
+        }
+
+        status("Chat hidden from your list 💗");
+        renderConversationList();
+      } catch (error) {
+        console.error("Delete chat error:", error);
+        status("Could not hide chat: " + error.message);
+        deleteButton.disabled = false;
+      }
+    };
+
+    row.append(openButton, deleteButton);
+    list.appendChild(row);
+  });
+}
+
 // ===== Authentication State =====
 
 onAuthStateChanged(auth, async (user) => {
   if (unsubscribeChats) unsubscribeChats();
   if (unsubscribeMessages) unsubscribeMessages();
   if (unsubscribePresence) unsubscribePresence();
+  if (unsubscribeHiddenChats) unsubscribeHiddenChats();
 
   unsubscribeChats = null;
   unsubscribeMessages = null;
   unsubscribePresence = null;
+  unsubscribeHiddenChats = null;
 
   clearInterval(presenceTimer);
   presenceTimer = null;
@@ -330,6 +438,8 @@ onAuthStateChanged(auth, async (user) => {
   activeChat = null;
   activeFriendId = null;
   selectedImageData = null;
+  cachedChats = [];
+  hiddenChatIds = new Set();
 
   $("authView").classList.toggle("hidden", !!user);
   $("chatView").classList.toggle("hidden", !user);
@@ -373,6 +483,29 @@ onAuthStateChanged(auth, async (user) => {
 
     startPresence();
 
+    // Listen for chats hidden by this user.
+    const hiddenChatsQuery = collection(
+      db,
+      "users",
+      user.uid,
+      "hiddenChats"
+    );
+
+    unsubscribeHiddenChats = onSnapshot(
+      hiddenChatsQuery,
+      (snapshot) => {
+        hiddenChatIds = new Set(
+          snapshot.docs.map((item) => item.id)
+        );
+
+        renderConversationList();
+      },
+      (error) => {
+        console.error("Hidden chats error:", error);
+        status("Could not load hidden chats: " + error.message);
+      }
+    );
+
     const chatsQuery = query(
       collection(db, "chats"),
       where("members", "array-contains", user.uid)
@@ -381,32 +514,8 @@ onAuthStateChanged(auth, async (user) => {
     unsubscribeChats = onSnapshot(
       chatsQuery,
       (snapshot) => {
-        $("conversationList").replaceChildren();
-
-        snapshot.forEach((chat) => {
-          const data = chat.data();
-          const members = data.members || [];
-          const friendId = members.find((id) => id !== user.uid);
-
-          const names = data.memberUsernames || [];
-          const friendUsername =
-            names.find((name) =>
-              usernameKey(name) !== currentUsername
-            ) || "Friend";
-
-          const button = document.createElement("button");
-          button.className =
-            "conversation" +
-            (activeChat === chat.id ? " active" : "");
-
-          button.textContent = "💌 @" + friendUsername;
-
-          button.onclick = () => {
-            openChat(chat.id, friendUsername, friendId);
-          };
-
-          $("conversationList").append(button);
-        });
+        cachedChats = snapshot.docs;
+        renderConversationList();
       },
       (error) => {
         console.error("Conversations error:", error);
@@ -485,12 +594,17 @@ $("startBtn").onclick = async () => {
       });
     }
 
+    // Starting this chat again makes it visible to the current user.
+    await deleteDoc(
+      doc(db, "users", currentUser.uid, "hiddenChats", chatId)
+    );
+
     $("friendUsername").value = "";
     openChat(chatId, friendProfile.username, friendId);
     status("Chat ready! 💗");
   } catch (error) {
     console.error("Start chat error:", error);
-    status("Start chat error: " + error.code);
+    status("Start chat error: " + error.message);
   }
 };
 
@@ -568,13 +682,7 @@ function openChat(id, friendUsername, friendId = null) {
   clearSelectedImage();
 
   listenToFriendPresence(friendId);
-
-  document.querySelectorAll(".conversation").forEach((button) => {
-    button.classList.toggle(
-      "active",
-      button.textContent.trim() === "💌 @" + friendUsername
-    );
-  });
+  renderConversationList();
 
   const messagesQuery = query(
     collection(db, "chats", id, "messages"),
@@ -590,9 +698,10 @@ function openChat(id, friendUsername, friendId = null) {
         const data = item.data();
         const bubble = document.createElement("div");
 
+        const isMine = data.senderId === currentUser?.uid;
+
         bubble.className =
-          "message " +
-          (data.senderId === currentUser?.uid ? "mine" : "theirs");
+          "message " + (isMine ? "mine" : "theirs");
 
         if (data.text) {
           const text = document.createElement("span");
@@ -624,6 +733,43 @@ function openChat(id, friendUsername, friendId = null) {
           : "Sending…";
 
         bubble.appendChild(time);
+
+        // Only the sender can see this delete option.
+        if (isMine) {
+          const deleteMessageButton = document.createElement("button");
+
+          deleteMessageButton.type = "button";
+          deleteMessageButton.textContent = "🗑️ Delete for everyone";
+          deleteMessageButton.className = "delete-message-btn";
+
+          deleteMessageButton.onclick = async () => {
+            if (!currentUser) return;
+
+            const confirmed = confirm(
+              "Delete this message for everyone?\n\n" +
+              "This cannot be undone."
+            );
+
+            if (!confirmed) return;
+
+            deleteMessageButton.disabled = true;
+
+            try {
+              await deleteDoc(
+                doc(db, "chats", id, "messages", item.id)
+              );
+
+              status("Message deleted for everyone 💗");
+            } catch (error) {
+              console.error("Delete message error:", error);
+              status("Could not delete message: " + error.message);
+              deleteMessageButton.disabled = false;
+            }
+          };
+
+          bubble.appendChild(deleteMessageButton);
+        }
+
         $("messages").appendChild(bubble);
       });
 
@@ -775,7 +921,7 @@ $("messageForm").onsubmit = async (event) => {
     status("Message sent! 💗");
   } catch (error) {
     console.error("Send message error:", error);
-    status("Send failed: " + error.code);
+    status("Send failed: " + error.message);
   } finally {
     sendButton.disabled = !activeChat;
   }
@@ -794,39 +940,4 @@ try {
 }
 
 photoInput.addEventListener("change", async () => {
-  const file = photoInput.files?.[0];
-  if (!file) return;
-
-  try {
-    const dataUrl = await compressImage(file);
-
-    try {
-      localStorage.setItem("chatvibe_profile_photo", dataUrl);
-    } catch {
-      status("Photo updated, but could not be saved locally.");
-    }
-
-    myPhoto.src = dataUrl;
-    status("Profile photo updated! 💗");
-  } catch (error) {
-    status(error.message);
-  } finally {
-    photoInput.value = "";
-  }
-});
-
-// ===== Logout =====
-
-$("logoutBtn").onclick = async () => {
-  try {
-    await updatePresence(false);
-    clearInterval(presenceTimer);
-    presenceTimer = null;
-
-    await signOut(auth);
-    status("Logged out successfully 💜");
-  } catch (error) {
-    console.error("Logout error:", error);
-    status("Logout error: " + error.message);
-  }
-};
+  const file = photoInput.files?.
