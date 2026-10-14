@@ -928,16 +928,43 @@ $("messageForm").onsubmit = async (event) => {
 };
 
 // ===== Profile Photo: This Device Only 📷 =====
-
-const photoInput = $("photoInput");
-const myPhoto = $("myPhoto");
-
-try {
-  const savedPhoto = localStorage.getItem("chatvibe_profile_photo");
-  if (savedPhoto) myPhoto.src = savedPhoto;
-} catch {
-  // Browser storage may be unavailable.
-}
-
 photoInput.addEventListener("change", async () => {
-  const file = photoInput.files?.
+  const file = photoInput.files?.[0];
+  if (!file) return;
+
+  try {
+    const dataUrl = await compressImage(file);
+
+    try {
+      localStorage.setItem("chatvibe_profile_photo", dataUrl);
+    } catch {
+      status("Photo updated, but could not be saved locally.");
+    }
+
+    myPhoto.src = dataUrl;
+    status("Profile photo updated! 💗");
+  } catch (error) {
+    status(error.message);
+  } finally {
+    photoInput.value = "";
+  }
+});
+
+// ===== Logout =====
+
+$("logoutBtn").onclick = async () => {
+  try {
+    stopPresence();
+
+    if (unsubscribeChats) unsubscribeChats();
+    if (unsubscribeMessages) unsubscribeMessages();
+    if (unsubscribePresence) unsubscribePresence();
+    if (unsubscribeHiddenChats) unsubscribeHiddenChats();
+
+    await signOut(auth);
+    status("Logged out successfully 💜");
+  } catch (error) {
+    console.error("Logout error:", error);
+    status("Logout error: " + error.message);
+  }
+};

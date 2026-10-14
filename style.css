@@ -649,3 +649,44 @@ body::before {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.conversation-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+}
+
+.conversation-row .conversation {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.delete-chat-btn {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  margin-left: auto;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #d98aaa;
+  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.delete-chat-btn {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  padding: 0;
+  font-size: 10px;
+  flex-shrink: 0;
+}
